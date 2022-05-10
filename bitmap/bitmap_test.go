@@ -60,7 +60,7 @@ func TestSetGetAndUnset(t *testing.T) {
 	}
 }
 
-func TestInvalidIndex(t *testing.T) {
+func TestAccessInvalidIndex(t *testing.T) {
 	bm := New(200, 300)
 
 	invalidIdxs := []int{-17, -1, 300, 1024}
@@ -89,6 +89,43 @@ func TestResize(t *testing.T) {
 		val, err := bm.Get(k)
 		assert.Nil(t, err)
 		assert.Equal(t, byte(1), val)
+	}
+}
+
+func TestRank(t *testing.T) {
+	bm := New(128, 128)
+	bm.data = []uint64{
+		0x84d5f768e45d7022,
+		0x1feeb05a21aeb691,
+	}
+	// 0b 10000100 11010101 11110111 01101000
+	//    11100100 01011101 01110000 00100010
+	//    00011111 11101110 10110000 01011010
+	//    00100001 10101110 10110110 10010001
+
+	tests := []struct {
+		idx    int
+		ones   int
+		zeroes int
+	}{
+		{0, 1, 0},
+		{7, 2, 6},
+		{17, 9, 9},
+		{31, 17, 15},
+		{55, 29, 27},
+		{64, 31, 34},
+		{120, 62, 59},
+		{127, 64, 64},
+	}
+
+	for _, test := range tests {
+		rankZero, err := bm.Rank(0, test.idx)
+		assert.Nil(t, err)
+		assert.Equal(t, test.zeroes, rankZero)
+
+		rankOne, err := bm.Rank(1, test.idx)
+		assert.Nil(t, err)
+		assert.Equal(t, test.ones, rankOne)
 	}
 }
 

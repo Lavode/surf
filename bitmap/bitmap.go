@@ -3,10 +3,14 @@ package bitmap
 import (
 	"fmt"
 	"math"
+	"math/bits"
 )
 
 // Bitmap provides a size-limited continuous binary structure, allowing access
 // to individiual bits.
+//
+// It further provides methods to count the number of 0s and 1s up to a given
+// position, respectively find the position of the i-th 0 and 1.
 //
 // Under the hood it is implemented as a slice of int64 which grows as
 // required.
@@ -116,6 +120,43 @@ func (bm *Bitmap) Get(bit int) (byte, error) {
 	val := byte(bm.data[idx] & mask >> (64 - offset - 1))
 
 	return val, nil
+}
+
+// RankZero returns the number of bits with value val, up to and including
+// position idx.
+//
+// An error is returned if the index is outside the range of the bitmap, or if
+// val is neither 0 nor 1.
+func (bm *Bitmap) Rank(val, idx int) (int, error) {
+	if !(val == 0 || val == 1) {
+		return 0, fmt.Errorf("Val must be one of 0, 1. Was %d", val)
+	}
+	checkOnes := val == 1
+	_ = checkOnes
+
+	cnt := 0
+	for i := 0; i <= idx; i += 64 {
+		var onesCount int
+		if i+63 < idx {
+			// Here we can consider the full uint64
+			onesCount = bits.OnesCount64(bm.data[i/64])
+		} else {
+			// Wheras here we only care about the first (idx-i)+1 bits
+			mask := (uint64(0xFFFFFFFFFFFFFFFF) << (64 - (idx - i + 1)))
+			onesCount = bits.OnesCount64(bm.data[i/64] & mask)
+		}
+
+		if checkOnes {
+			cnt += onesCount
+		} else {
+			cnt += (64 - onesCount)
+			if i+63 > idx {
+				cnt -= (63 - (idx-i)%64)
+			}
+		}
+	}
+
+	return cnt, nil
 }
 
 // resize will increase the bitmap's internal memory such that it can accomodate
