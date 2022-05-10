@@ -2,8 +2,9 @@ package bitmap
 
 import (
 	"fmt"
-	"math"
 	"math/bits"
+
+	"github.com/Lavode/surf/bitops"
 )
 
 // Bitmap provides a size-limited continuous binary structure, allowing access
@@ -61,9 +62,8 @@ func (bm *Bitmap) Set(bit int) error {
 
 	idx := bit / 64
 	offset := bit % 64
-	// 0x8000000000000000 is a single 1, followed by 63 0s
-	mask := uint64(0x8000000000000000) >> offset
 
+	mask := bitops.SingleOneMask(offset)
 	bm.data[idx] = bm.data[idx] | mask
 
 	return nil
@@ -84,13 +84,7 @@ func (bm *Bitmap) Unset(bit int) error {
 	idx := bit / 64
 	offset := bit % 64
 
-	// Type inference otherwise initializes them as an int, upon which the
-	// below will overflow.
-	var leftMask, rightMask uint64
-	leftMask = math.MaxUint64 << (64 - offset) // first idx bits are 1s, followed by 0s
-	rightMask = math.MaxUint64 >> (offset + 1) // last 64 - (idx + 1) bits are 1s, the rest is 0s.
-	mask := leftMask | rightMask               // 64 1s, except for one 0 at offset
-
+	mask := bitops.OnesMask(offset, 64-offset-1) // 64 1s, except for one 0 at offset
 	bm.data[idx] = bm.data[idx] & mask
 
 	return nil
@@ -112,9 +106,7 @@ func (bm *Bitmap) Get(bit int) (byte, error) {
 
 	idx := bit / 64
 	offset := bit % 64
-	// 0x8000000000000000 is a single 1, followed by 63 0s
-	mask := uint64(0x8000000000000000) >> offset
-
+	mask := bitops.SingleOneMask(offset)
 	// Shifting right will ensure we've got a 0 or a 1, so we can safely
 	// convert to byte.
 	val := byte(bm.data[idx] & mask >> (64 - offset - 1))
@@ -137,12 +129,15 @@ func (bm *Bitmap) Rank(val, idx int) (int, error) {
 	cnt := 0
 	for i := 0; i <= idx; i += 64 {
 		var onesCount int
-		if i+63 < idx {
+
+		// We can count ones/zeroes in the full next uint64
+		fullBlock := i+63 < idx
+		if fullBlock {
 			// Here we can consider the full uint64
 			onesCount = bits.OnesCount64(bm.data[i/64])
 		} else {
 			// Wheras here we only care about the first (idx-i)+1 bits
-			mask := (uint64(0xFFFFFFFFFFFFFFFF) << (64 - (idx - i + 1)))
+			mask := bitops.LeadingOnesMask(idx - i + 1)
 			onesCount = bits.OnesCount64(bm.data[i/64] & mask)
 		}
 
@@ -150,7 +145,7 @@ func (bm *Bitmap) Rank(val, idx int) (int, error) {
 			cnt += onesCount
 		} else {
 			cnt += (64 - onesCount)
-			if i+63 > idx {
+			if !fullBlock {
 				cnt -= (63 - (idx-i)%64)
 			}
 		}
