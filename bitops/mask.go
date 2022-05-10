@@ -1,5 +1,5 @@
 // bitops provides various bitwise utilities on uint64s which are not supported
-// by math.bit.
+// by math.bits.
 package bitops
 
 import "math"

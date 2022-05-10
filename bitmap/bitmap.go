@@ -114,7 +114,7 @@ func (bm *Bitmap) Get(bit int) (byte, error) {
 	return val, nil
 }
 
-// RankZero returns the number of bits with value val, up to and including
+// Rank returns the number of bits with value val, up to and including
 // position idx.
 //
 // An error is returned if the index is outside the range of the bitmap, or if
@@ -128,7 +128,6 @@ func (bm *Bitmap) Rank(val, idx int) (int, error) {
 		return 0, fmt.Errorf("Val must be one of 0, 1. Was %d", val)
 	}
 	checkOnes := val == 1
-	_ = checkOnes
 
 	cnt := 0
 	for i := 0; i <= idx; i += 64 {
@@ -148,9 +147,12 @@ func (bm *Bitmap) Rank(val, idx int) (int, error) {
 		if checkOnes {
 			cnt += onesCount
 		} else {
-			cnt += (64 - onesCount)
-			if !fullBlock {
-				cnt -= (63 - (idx-i)%64)
+			if fullBlock {
+				cnt += 64 - onesCount
+			} else {
+				// We only checked the first (idx - i + 1) bits
+				// for ones.
+				cnt += idx - i + 1 - onesCount
 			}
 		}
 	}
