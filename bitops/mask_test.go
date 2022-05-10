@@ -100,6 +100,8 @@ func TestOnesMask(t *testing.T) {
 		{0, 0, 0x0000000000000000},
 		{3, 17, 0xE00000000001FFFF},
 		{24, 32, 0xFFFFFF00FFFFFFFF},
+		{-17, 65, 0xFFFFFFFFFFFFFFFF},
+		{65, -17, 0xFFFFFFFFFFFFFFFF},
 	}
 
 	for _, test := range tests {

@@ -11,12 +11,14 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, 2, len(bm.data))
 	assert.Equal(t, 4, cap(bm.data))
 	assert.Equal(t, 256, bm.capacity)
+	assert.Equal(t, 128, bm.length)
 
 	// This one will trigger rounding up
 	bm = New(129, 257)
 	assert.Equal(t, 3, len(bm.data))
 	assert.Equal(t, 5, cap(bm.data))
 	assert.Equal(t, 257, bm.capacity)
+	assert.Equal(t, 192, bm.length)
 }
 
 func TestSet(t *testing.T) {
@@ -77,18 +79,27 @@ func TestAccessInvalidIndex(t *testing.T) {
 }
 
 func TestResize(t *testing.T) {
-	bm := New(0, 1024)
-
 	idxs := []int{0, 10, 100, 500, 1023}
+
+	// Ensure Set resizes
+	bm := New(0, 1024)
 	for _, k := range idxs {
 		err := bm.Set(k)
 		assert.Nil(t, err)
 	}
 
+	// Ensure Unset resizes
+	bm = New(0, 1024)
 	for _, k := range idxs {
-		val, err := bm.Get(k)
+		err := bm.Unset(k)
 		assert.Nil(t, err)
-		assert.Equal(t, byte(1), val)
+	}
+
+	// Ensure Get resizes
+	bm = New(0, 1024)
+	for _, k := range idxs {
+		_, err := bm.Get(k)
+		assert.Nil(t, err)
 	}
 }
 
@@ -127,6 +138,21 @@ func TestRank(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, test.ones, rankOne)
 	}
+}
+
+func TestRankInvalidArguments(t *testing.T) {
+	bm := New(128, 128)
+
+	// Invalid lookup value
+	_, err := bm.Rank(3, 27)
+	assert.Error(t, err)
+
+	// Invalid indices
+	_, err = bm.Rank(0, -3)
+	assert.Error(t, err)
+
+	_, err = bm.Rank(0, 128)
+	assert.Error(t, err)
 }
 
 func BenchmarkSet(b *testing.B) {

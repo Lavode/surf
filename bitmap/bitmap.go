@@ -43,7 +43,7 @@ func New(size, capacity int) *Bitmap {
 	}
 
 	data := make([]uint64, dataSize, dataCapacity)
-	bm := Bitmap{capacity: capacity, length: size * 64, data: data}
+	bm := Bitmap{capacity: capacity, length: dataSize * 64, data: data}
 
 	return &bm
 }
@@ -120,6 +120,10 @@ func (bm *Bitmap) Get(bit int) (byte, error) {
 // An error is returned if the index is outside the range of the bitmap, or if
 // val is neither 0 nor 1.
 func (bm *Bitmap) Rank(val, idx int) (int, error) {
+	if idx < 0 || idx > bm.length-1 {
+		return 0, fmt.Errorf("Index must be in range [%d, %d]. Was %d]", 0, bm.length-1, idx)
+	}
+
 	if !(val == 0 || val == 1) {
 		return 0, fmt.Errorf("Val must be one of 0, 1. Was %d", val)
 	}
