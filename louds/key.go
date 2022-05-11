@@ -1,6 +1,6 @@
 package louds
 
-// Key specifies a single key which can be stored in a LOUDS-encoded FST tree.c
+// Key defines a single key which can be stored in a LOUDS-encoded FST tree.
 type Key []byte
 
 // Less implements a lexicographic ordering of keys.
