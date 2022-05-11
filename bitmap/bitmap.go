@@ -114,6 +114,74 @@ func (bm *Bitmap) Get(bit int) (byte, error) {
 	return val, nil
 }
 
+// Select returns the index of the nth bit value val.
+//
+// An error is returned if there is no nth bit of value val in the bitmap, or
+// if val is neither 0 nor 1.
+func (bm *Bitmap) Select(val, nth int) (int, error) {
+	if !(val == 0 || val == 1) {
+		return 0, fmt.Errorf("Val must be one of 0, 1. Was %d", val)
+	}
+
+	if nth <= 0 || nth > bm.length {
+		return 0, fmt.Errorf("Nth must be in [0, %d]. Was %d", bm.length, nth)
+	}
+
+	checkOnes := val == 1
+
+	count := 0
+	var idx int
+	for idx = 0; idx < bm.length; idx += 64 {
+		var additionalCount int
+		if checkOnes {
+			additionalCount = bits.OnesCount64(bm.data[idx/64])
+		} else {
+			additionalCount = 64 - bits.OnesCount64(bm.data[idx/64])
+		}
+
+		if count+additionalCount >= nth {
+			// We'd overshoot, which would require tricky
+			// backtracking. So instead we'll bail out.
+			// We also bail out if it's an exact hit, to simplify
+			// follow-up code at the cost of checking the uint64
+			// twice.
+			break
+		}
+
+		// Otherwise we proceed on our merry way
+		count += additionalCount
+	}
+
+	// At this point we either a) ran out of data or b) need to consider
+	// the most recent uint64 bit by bit.
+
+	// Case 1: We ran out of data.
+	if idx > bm.length {
+		return 0, fmt.Errorf("Bitmap only contained %d bits of value %d", count, val)
+	}
+
+	// Case 2: We bailed out as we'd have overshot. idx currently points to
+	// the first bit of the most-recently-considered uint64.
+	// We'll go through the current uint64 bit by bit until we get to the
+	// desired count.
+	for count < nth {
+		val, err := bm.Get(idx)
+		if err != nil {
+			return 0, err
+		}
+
+		if (val == 1 && checkOnes) || (val == 0 && !checkOnes) {
+			count += 1
+		}
+
+		idx += 1
+	}
+
+	// idx is one too high as we increased it one last time in the last
+	// iteration of the loop
+	return idx - 1, nil
+}
+
 // Rank returns the number of bits with value val, up to and including
 // position idx.
 //

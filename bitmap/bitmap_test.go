@@ -155,6 +155,58 @@ func TestRankInvalidArguments(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestSelect(t *testing.T) {
+	bm := New(128, 128)
+	bm.data = []uint64{
+		0x84d5f768e45d7022,
+		0x1feeb05a21aeb691,
+	}
+	// 0b 10000100 11010101 11110111 01101000
+	//    11100100 01011101 01110000 00100010
+	//    00011111 11101110 10110000 01011010
+	//    00100001 10101110 10110110 10010001
+
+	tests := []struct {
+		n       int
+		oneIdx  int
+		zeroIdx int
+	}{
+		{7, 15, 10},
+		{17, 28, 36},
+		{31, 62, 60},
+		{55, 109, 107},
+		{64, 127, 126},
+	}
+
+	for _, test := range tests {
+		selectZero, err := bm.Select(0, test.n)
+		assert.Nil(t, err)
+		assert.Equal(t, test.zeroIdx, selectZero)
+
+		selectOne, err := bm.Select(1, test.n)
+		assert.Nil(t, err)
+		assert.Equal(t, test.oneIdx, selectOne)
+	}
+}
+
+func TestSelectInvalidArguments(t *testing.T) {
+	bm := New(128, 128)
+
+	// Invalid lookup value
+	_, err := bm.Select(3, 27)
+	assert.Error(t, err)
+
+	// Invalid n-th value
+	_, err = bm.Select(0, -3)
+	assert.Error(t, err)
+
+	_, err = bm.Select(0, 0)
+	assert.Error(t, err)
+
+	_, err = bm.Select(0, 129)
+	assert.Error(t, err)
+}
+
 func BenchmarkSet(b *testing.B) {
 	bm := New(0, b.N)
 
