@@ -10,14 +10,14 @@ func TestNew(t *testing.T) {
 	bm := New(128, 256)
 	assert.Equal(t, 2, len(bm.data))
 	assert.Equal(t, 4, cap(bm.data))
-	assert.Equal(t, 256, bm.capacity)
+	assert.Equal(t, 256, bm.Capacity)
 	assert.Equal(t, 128, bm.length)
 
 	// This one will trigger rounding up
 	bm = New(129, 257)
 	assert.Equal(t, 3, len(bm.data))
 	assert.Equal(t, 5, cap(bm.data))
-	assert.Equal(t, 257, bm.capacity)
+	assert.Equal(t, 257, bm.Capacity)
 	assert.Equal(t, 192, bm.length)
 }
 

@@ -16,8 +16,8 @@ import (
 // Under the hood it is implemented as a slice of int64 which grows as
 // required.
 type Bitmap struct {
-	// capacity is the number of bits the bitmap allows to access
-	capacity int
+	// Capacity is the number of bits the bitmap allows to access
+	Capacity int
 	// length is the number of bits accessible without a resize
 	length int
 	data   []uint64
@@ -43,7 +43,7 @@ func New(size, capacity int) *Bitmap {
 	}
 
 	data := make([]uint64, dataSize, dataCapacity)
-	bm := Bitmap{capacity: capacity, length: dataSize * 64, data: data}
+	bm := Bitmap{Capacity: capacity, length: dataSize * 64, data: data}
 
 	return &bm
 }
@@ -52,8 +52,8 @@ func New(size, capacity int) *Bitmap {
 //
 // An error is returned if the index is invalid.
 func (bm *Bitmap) Set(bit int) error {
-	if bit < 0 || bit >= bm.capacity {
-		return fmt.Errorf("Invalid index %d. Must be in range [0, %d]", bit, bm.capacity-1)
+	if bit < 0 || bit >= bm.Capacity {
+		return fmt.Errorf("Invalid index %d. Must be in range [0, %d]", bit, bm.Capacity-1)
 	}
 
 	if bit >= bm.length {
@@ -73,8 +73,8 @@ func (bm *Bitmap) Set(bit int) error {
 //
 // An error is returned if the index is invalid.
 func (bm *Bitmap) Unset(bit int) error {
-	if bit < 0 || bit >= bm.capacity {
-		return fmt.Errorf("Invalid index %d. Must be in range [0, %d]", bit, bm.capacity-1)
+	if bit < 0 || bit >= bm.Capacity {
+		return fmt.Errorf("Invalid index %d. Must be in range [0, %d]", bit, bm.Capacity-1)
 	}
 
 	if bit >= bm.length {
@@ -96,8 +96,8 @@ func (bm *Bitmap) Unset(bit int) error {
 //
 // An error is returned if the index is invalid.
 func (bm *Bitmap) Get(bit int) (byte, error) {
-	if bit < 0 || bit >= bm.capacity {
-		return 0, fmt.Errorf("Invalid index %d. Must be in range [0, %d]", bit, bm.capacity-1)
+	if bit < 0 || bit >= bm.Capacity {
+		return 0, fmt.Errorf("Invalid index %d. Must be in range [0, %d]", bit, bm.Capacity-1)
 	}
 
 	if bit >= bm.length {
@@ -239,8 +239,8 @@ func (bm *Bitmap) resize(bit int) {
 		return
 	}
 
-	if bit > bm.capacity {
-		bit = bm.capacity
+	if bit > bm.Capacity {
+		bit = bm.Capacity
 	}
 
 	// Amount of int64s we need in total to accomodate new amount of bits
