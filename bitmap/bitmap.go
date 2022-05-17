@@ -229,6 +229,11 @@ func (bm *Bitmap) Rank(val, idx int) (int, error) {
 	return cnt, nil
 }
 
+// String returs a representation of the bitmap's contents as a string of bits.
+//
+// This means that each stored bit will be encoded as either a 0 or 1 ASCII
+// character. Eight bits are grouped together, with 8 bytes per line. The
+// output also contains decimal bit offsets per line.
 func (bitmap Bitmap) String() string {
 	out := ""
 
