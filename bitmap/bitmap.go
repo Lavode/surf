@@ -2,6 +2,7 @@ package bitmap
 
 import (
 	"fmt"
+	"math"
 	"math/bits"
 
 	"github.com/Lavode/surf/bitops"
@@ -226,6 +227,37 @@ func (bm *Bitmap) Rank(val, idx int) (int, error) {
 	}
 
 	return cnt, nil
+}
+
+func (bitmap Bitmap) String() string {
+	out := ""
+
+	// What a monstrosity :)
+	maxOffsetLength := int(math.Ceil(math.Log10(float64(bitmap.length))))
+	// Decimal (%d)
+	// Padded to maxOffsetLength
+	// With 0s rather than spaces (0)
+	pattern := fmt.Sprintf("%%0%dd |", maxOffsetLength)
+
+	// As we work with int64s internally, we know that the bitmap's length
+	// is guaranteed to be a multiple of 64.
+	for i := 0; i < len(bitmap.data); i++ {
+		// We want the bit as address
+		out += fmt.Sprintf(pattern, i*64)
+
+		// We'll print eight bytes at a time
+		bitsString := fmt.Sprintf("%064b", bitmap.data[i])
+
+		// But we want a space every eight digits
+		for j := 0; j < 64; j += 8 {
+			b := bitsString[j : j+8]
+			out += fmt.Sprintf(" %s", b)
+		}
+
+		out += "\n"
+	}
+
+	return out
 }
 
 // resize will increase the bitmap's internal memory such that it can accomodate

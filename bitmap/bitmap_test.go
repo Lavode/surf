@@ -207,6 +207,24 @@ func TestSelectInvalidArguments(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestString(t *testing.T) {
+	bm := New(256, 512)
+
+	bits := []int{0, 3, 17, 20, 45, 62, 63, 101, 117, 156, 184, 212, 255}
+	for _, b := range bits {
+		assert.Nil(t, bm.Set(b))
+	}
+
+	str := bm.String()
+	expected :=
+		`000 | 10010000 00000000 01001000 00000000 00000000 00000100 00000000 00000011
+064 | 00000000 00000000 00000000 00000000 00000100 00000000 00000100 00000000
+128 | 00000000 00000000 00000000 00001000 00000000 00000000 00000000 10000000
+192 | 00000000 00000000 00001000 00000000 00000000 00000000 00000000 00000001
+`
+	assert.Equal(t, expected, str)
+}
+
 func BenchmarkSet(b *testing.B) {
 	bm := New(0, b.N)
 
