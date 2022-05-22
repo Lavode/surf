@@ -26,7 +26,7 @@ type Bitmap struct {
 
 // New initializes a new bitmap.
 //
-// Capacity specifies the maximum size of the bitmap in bits. Thus the
+// Capacity specifies the maximum size of the bitmap in bits. Thus theh
 // addressable bits will be in the closed interval [0, capacity - 1].
 //
 // size specifies the size with which the bitmap will be initialized, in bits.
@@ -263,6 +263,23 @@ func (bitmap Bitmap) String() string {
 	}
 
 	return out
+}
+
+// Equal checks whether the length and content of two bitmaps is equal.
+//
+// It does not compare their capacities, however.
+func (bm *Bitmap) Equal(other *Bitmap) bool {
+	if bm.length != other.length {
+		return false
+	}
+
+	for i := 0; i < bm.length/64; i++ {
+		if bm.data[i] != other.data[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 // resize will increase the bitmap's internal memory such that it can accomodate
