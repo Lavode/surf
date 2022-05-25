@@ -26,7 +26,7 @@ type Bitmap struct {
 
 // New initializes a new bitmap.
 //
-// Capacity specifies the maximum size of the bitmap in bits. Thus theh
+// Capacity specifies the maximum size of the bitmap in bits. Thus the
 // addressable bits will be in the closed interval [0, capacity - 1].
 //
 // size specifies the size with which the bitmap will be initialized, in bits.
