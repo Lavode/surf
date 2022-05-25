@@ -2,7 +2,6 @@ package dense
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/Lavode/surf/bitmap"
 	"github.com/Lavode/surf/louds"
@@ -94,8 +93,6 @@ func (builder *Builder) Build(keys []louds.Key) error {
 	builder.currentTask.keys = keys
 
 	for depth := 0; depth < maxKeyLength(keys); depth++ {
-		log.Printf("Current depth: %d", depth)
-
 		// During iteration we'll be adding tasks of the next tree
 		// level. But we only want to consider tasks of the current
 		// level.
@@ -104,11 +101,12 @@ func (builder *Builder) Build(keys []louds.Key) error {
 			task := builder.tasks[i]
 
 			if len(task.keys) == 0 {
-				log.Printf("\tSkipping empty task")
+				// Empty tasks are the result of there only
+				// being a single key pointing to this node,
+				// which has reached the end.
 				continue
 			}
 
-			log.Printf("\tConsidering pending task with keys %s, isPrefixKey %t (now in node %d)", task.keys, task.isPrefixKey, builder.currentNodeId)
 			// Each task corresponds to one node, so us starting
 			// with a new task means we're populating a new node
 			nodeHasEdges := false
@@ -122,17 +120,13 @@ func (builder *Builder) Build(keys []louds.Key) error {
 			// If the node is non-empty (which is the case if we are here), and the task has
 			// its isPrefixKey flag set, then that means that one key ended on this node.
 			if task.isPrefixKey {
-				log.Printf("\t\tSetting node's is-prefix-key flag")
 				builder.setIsPrefixKey()
 			}
 
 			for _, key := range task.keys {
 				edge := key[depth]
-				log.Printf("\t\tConsidering key %s (edge = %c)", key, edge)
 
 				if !nodeHasEdges || mostRecentEdge != edge {
-					log.Printf("\t\t\tDefining new edge with value %c", edge)
-
 					err := builder.addEdge(edge)
 					if err != nil {
 						return err
@@ -147,8 +141,6 @@ func (builder *Builder) Build(keys []louds.Key) error {
 				}
 
 				if depth == len(key)-1 {
-					log.Printf("\t\t\tReached end of key")
-
 					// Key ends at the node next to its edge, so if that node exists it will
 					// have to have IsPrefixKey set to true
 					builder.currentTask.isPrefixKey = true
@@ -158,7 +150,6 @@ func (builder *Builder) Build(keys []louds.Key) error {
 						return nil
 					}
 
-					log.Printf("\t\t\tKey must be considered further, adding to tasks of next level")
 					builder.currentTask.keys = append(builder.currentTask.keys, key)
 				}
 
