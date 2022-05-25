@@ -8,22 +8,40 @@ import (
 	"github.com/Lavode/surf/louds"
 )
 
-// NodeTask contains things which need to be considered for building up one
+// NodeTask contains things which need to be considered for building up a
 // future node.
 //
 // This includes keys whose path contains that node, but also additional
 // information such as that the node might be a prefix key.
 type NodeTask struct {
-	// keys is the slice of keys which will lead to edges on the future node.
+	// keys is the slice of keys whose path will pass through the given node.
 	keys []louds.Key
 	// isPrefixKey defines whether this node's isPrefixKey flag will have
 	// to be set to true - if the node will exist at all.
 	isPrefixKey bool
 }
 
+// Builder provides methods to build up a LOUDS-DENSE encoded FST tree from a
+// set of keys.
 type Builder struct {
-	Labels      *bitmap.Bitmap
-	HasChild    *bitmap.Bitmap
+	// Labels is the D-Labels bitmap of the DENSE-encoded FST.
+	//
+	// Nodes are encoded as blocks of 256 bits in level-order. If the node
+	// has an outbound edge with value `b`, then the b-th bit of the node's
+	// 256 bit block is set.
+	Labels *bitmap.Bitmap
+
+	// HasChild is the D-HasChild bitmap of the DENSE-encoded FST.
+	//
+	// If a node has an outbound edge with value `b` leading to a subtree
+	// of the tree (rather than a terminal value), then the b-th bit of the
+	// node's block is set.
+	HasChild *bitmap.Bitmap
+
+	// IsPrefixKey is the D-IsPrefixKey bitmap of the DENSE-encoded FST.
+	//
+	// If the n-th node is also the terminal node of a stored key, the n-th
+	// bit of this bitmap will be set.
 	IsPrefixKey *bitmap.Bitmap
 
 	// tasks is a slice of tasks to be taken care of to define nodes
@@ -78,7 +96,7 @@ func (builder *Builder) Build(keys []louds.Key) error {
 	for depth := 0; depth < maxKeyLength(keys); depth++ {
 		log.Printf("Current depth: %d", depth)
 
-		// During interation we'll be adding tasks of the next tree
+		// During iteration we'll be adding tasks of the next tree
 		// level. But we only want to consider tasks of the current
 		// level.
 		n := len(builder.tasks)
@@ -157,6 +175,7 @@ func (builder *Builder) Build(keys []louds.Key) error {
 	return nil
 }
 
+// addEdge adds a new edge at the node being currently built up.
 func (builder *Builder) addEdge(edge byte) error {
 	bit := builder.labelOffset() + int(edge)
 	err := builder.Labels.Set(bit)
@@ -173,6 +192,8 @@ func (builder *Builder) addEdge(edge byte) error {
 	return nil
 }
 
+// setHasChild sets the has-child flag of the given edge at the node being
+// currently built up.
 func (builder *Builder) setHasChild(edge byte) error {
 	bit := builder.hasChildOffset() + int(edge)
 	err := builder.HasChild.Set(bit)
@@ -189,6 +210,8 @@ func (builder *Builder) setHasChild(edge byte) error {
 	return nil
 }
 
+// setIsPrefixKey sets the is-prefix-key flag of the node currently being built
+// up.
 func (builder *Builder) setIsPrefixKey() error {
 	bit := builder.isPrefixKeyOffset()
 	err := builder.IsPrefixKey.Set(bit)
@@ -248,6 +271,8 @@ func (builder *Builder) initializeNode() error {
 	return nil
 }
 
+// appendNodeTask adds a new empty NodeTask to the list of future tasks to
+// perform, and updates the pointer to the most recently added NodeTask.
 func (builder *Builder) appendNodeTask() {
 	task := &NodeTask{
 		keys: make([]louds.Key, 0),
@@ -257,6 +282,7 @@ func (builder *Builder) appendNodeTask() {
 	builder.currentTask = task
 }
 
+// maxKeyLength returns the maximum length in bytes of the given LOUDS keys.
 func maxKeyLength(keys []louds.Key) int {
 	maxKeyLength := 0
 	for _, k := range keys {

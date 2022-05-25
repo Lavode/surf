@@ -108,6 +108,8 @@ func TestBuildTwoLevels(t *testing.T) {
 func TestBuildMultiLevel(t *testing.T) {
 	builder := NewBuilder(BUILDER_MEMORY_LIMIT)
 
+	// These keys were chosen such as not to cause any kind of truncation.
+	// (Respectively they /are/ truncated already)
 	keys := []louds.Key{
 		[]byte("f"),
 		[]byte("far"),
