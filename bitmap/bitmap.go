@@ -115,7 +115,10 @@ func (bm *Bitmap) Get(bit int) (byte, error) {
 	return val, nil
 }
 
-// Select returns the index of the nth bit value val.
+// Select returns the index of the nth bit of value val.
+//
+// As an example, Select(0, 13) would return the index of the 13th 0-bit in the
+// bitmap.
 //
 // An error is returned if there is no nth bit of value val in the bitmap, or
 // if val is neither 0 nor 1.
@@ -185,6 +188,9 @@ func (bm *Bitmap) Select(val, nth int) (int, error) {
 
 // Rank returns the number of bits with value val, up to and including
 // position idx.
+//
+// As an example. Rank(1, 42) would return the number of 1-bits up to and
+// including bit 42.
 //
 // An error is returned if the index is outside the range of the bitmap, or if
 // val is neither 0 nor 1.
