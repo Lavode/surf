@@ -236,8 +236,8 @@ func (builder *Builder) isPrefixKeyOffset() int {
 	return builder.currentNodeId
 }
 
-// initialzeNode initialies the various bitmaps to accomodate the new node with
-// ID builder.currentNodeId.
+// initializeNode initializes the various bitmaps to accomodate the new node
+// with ID builder.currentNodeId.
 func (builder *Builder) initializeNode() error {
 	// We'll make sure the current node's extents in the various bitmaps is
 	// allocated.
