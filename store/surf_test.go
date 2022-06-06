@@ -31,7 +31,6 @@ func TestNew(t *testing.T) {
 }
 
 func TestLookup(t *testing.T) {
-	t.Skip("WIP")
 	keys := [][]byte{
 		[]byte{0x00, 0x01},       // Key in intermediary node
 		[]byte{0x00, 0x01, 0x02}, // Key in leaf node
@@ -57,7 +56,6 @@ func TestLookup(t *testing.T) {
 	nonexistantKeys := [][]byte{
 		[]byte{0x00, 0x02},
 		[]byte{0x43},
-		[]byte{0xFF, 0x42, 0x70, 0x71, 0x72},
 	}
 
 	for _, k := range nonexistantKeys {
@@ -72,8 +70,75 @@ func TestLookup(t *testing.T) {
 	}
 }
 
+// Performs a test with the test-data-set pulled from the paper.
+func TestLookupPaperTestset(t *testing.T) {
+	keys := [][]byte{
+		[]byte("f"),
+		[]byte("farther"),
+		[]byte("fas"),
+		[]byte("fasten"),
+		[]byte("fat"),
+		[]byte("splice"),
+		[]byte("topper"),
+		[]byte("toy"),
+		[]byte("tries"),
+		[]byte("tripper"),
+		[]byte("trying"),
+	}
+
+	surf, err := New(keys, SURFOptions{})
+	if err != nil {
+		t.Fatalf("Error creating SuRF store: %v", err)
+	}
+
+	for _, k := range keys {
+		exists, err := surf.Lookup(k)
+		if err != nil {
+			t.Fatalf("Error looking up key: %v", err)
+		}
+
+		if !exists {
+			t.Errorf("Expected key %s to exist; but did not", k)
+		}
+	}
+
+	nonexistantKeys := [][]byte{
+		[]byte("x"),      // Single-length key
+		[]byte("xavier"), // And an extension thereof
+		[]byte("fasi"),   // Shared prefix with actual key but not causing a FP
+		[]byte("fa"),     // Prefix of actual key but not causing a FP
+	}
+
+	for _, k := range nonexistantKeys {
+		exists, err := surf.Lookup(k)
+		if err != nil {
+			t.Fatalf("Error looking up key: %v", err)
+		}
+
+		if exists {
+			t.Errorf("Expected key %s to not exist; but did", k)
+		}
+	}
+
+	falsePositiveKeys := [][]byte{
+		[]byte("fatter"), // FP with fat,
+		[]byte("faster"), // FP with fast(en)
+		[]byte("sorry"),  // FP with s
+	}
+
+	for _, k := range falsePositiveKeys {
+		exists, err := surf.Lookup(k)
+		if err != nil {
+			t.Fatalf("Error looking up key: %v", err)
+		}
+
+		if !exists {
+			t.Errorf("Expected false-positive when looking up key %s; but got none", k)
+		}
+	}
+}
+
 func TestLookupFalsePositive(t *testing.T) {
-	t.Skip("WIP")
 	// This selection of keys will cause a truncated node after the path
 	// 0x00 -> 0x01.
 	keys := [][]byte{

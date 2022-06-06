@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Lavode/surf/bitmap"
 	"github.com/Lavode/surf/louds"
@@ -78,7 +79,69 @@ func New(rawKeys [][]byte, options SURFOptions) (*SURF, error) {
 // keys, as well as the number of additional bits used to store full keys
 // (RealBits) and the hash value of keys (KeyBits).
 func (surf *SURF) Lookup(key []byte) (bool, error) {
-	return true, nil
+	// The level-order index of the node we are currently in.
+	// As such, currentNode is also the offset in D-IsPrefixKey, and
+	// currentNode * 256 is the offset in D-Labels and D-HasChild.
+	currentNode := 0
+
+	for i := 0; i < len(key); i++ {
+		keyByte := key[i]
+		labelOffset := currentNode*256 + int(keyByte)
+
+		log.Printf("Currently checking node %d, looking for edge %x (offset = %d)", currentNode, keyByte, labelOffset)
+
+		hasLabel, err := surf.DenseLabels.Get(labelOffset)
+		if err != nil {
+			return false, fmt.Errorf("Error accessing bit %d in D-Labels: %v", labelOffset, err)
+		}
+
+		if hasLabel == 0 {
+			// There's no outbound edge with the value we are
+			// looking for, so the key doesn't exist.
+			log.Printf("Edge not found, key does not exist")
+			return false, nil
+		}
+
+		// Outbound edge exists. There's three cases now:
+		// 1) It points to a value => Key exists
+		// 2) It points to a node
+		//    a) Which is a prefix key => Key exists
+		//    b) Which is not a prefix key => Check further
+		hasChild, err := surf.DenseHasChild.Get(labelOffset)
+		if err != nil {
+			return false, fmt.Errorf("Error accessing bit %d in D-HasChild: %v", labelOffset, err)
+		}
+
+		if hasChild == 0 {
+			log.Printf("Edge found with HasChild == 0, key exists")
+			return true, nil
+		} else {
+			log.Printf("Edge found with HasChild == 1, must dive deeper")
+
+			// Index of node this edge points to is given by:
+			// rank_1(D-HasChild, offset)
+			currentNode, err = surf.DenseHasChild.Rank(1, labelOffset)
+			if err != nil {
+				return false, fmt.Errorf("Error calculating rank_1(%d) over D-HasChild: %v", labelOffset, err)
+			}
+		}
+	}
+
+	// If we get until here, then we traversed the whole key. To determine
+	// whether the key exists, we now must check if our current node has
+	// IsPrefixKey set to true.
+	isPrefixKey, err := surf.DenseIsPrefixKey.Get(currentNode)
+	if err != nil {
+		return false, fmt.Errorf("Error accessing bit %d in D-IsPrefixKey: %v", currentNode, err)
+	}
+
+	if isPrefixKey == 1 {
+		log.Printf("Reached end of key on node with IsPrefixKey = 1, key found")
+		return true, nil
+	} else {
+		log.Printf("Reached end of key on node with IsPrefixKey = 0, key not found")
+		return false, nil
+	}
 }
 
 // RangeLookup checks the existence of a key in the [low, high] range,
