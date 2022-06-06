@@ -3,7 +3,6 @@ package store
 import "testing"
 
 func TestNew(t *testing.T) {
-	t.Skip("WIP")
 	keys := [][]byte{}
 
 	_, err := New(keys, SURFOptions{})
@@ -25,7 +24,7 @@ func TestNew(t *testing.T) {
 	if surf.HashBits != 30 {
 		t.Errorf("Expected HashBits to be 30; was %d", surf.R)
 	}
-	if surf.RealBits != 30 {
+	if surf.RealBits != 40 {
 		t.Errorf("Expected RealBits to be 40; was %d", surf.R)
 	}
 

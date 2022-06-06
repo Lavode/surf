@@ -47,6 +47,11 @@ type SURFOptions struct {
 	//
 	// The default is 4.
 	RealBits *uint
+
+	// MemoryLimit sets the memory limit, in bytes, of the LOUDS encoding.
+	//
+	// The default is 256 MB
+	MemoryLimit *int
 }
 
 // setDefaults sets default values.
@@ -64,5 +69,10 @@ func (options *SURFOptions) setDefaults() {
 	if options.RealBits == nil {
 		var x uint = 4
 		options.RealBits = &x
+	}
+
+	if options.MemoryLimit == nil {
+		var x int = 256_000_000
+		options.MemoryLimit = &x
 	}
 }
