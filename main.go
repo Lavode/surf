@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Lavode/surf/louds"
-	"github.com/Lavode/surf/louds/dense"
-	"golang.org/x/exp/slices"
+	"github.com/Lavode/surf/store"
 )
 
 const BITMAP_CAPACITY = 80_000_000 // 10 MB
 
 func main() {
-	keys := []louds.Key{
+	keys := [][]byte{
 		[]byte("f"),
 		[]byte("farther"),
 		[]byte("fas"),
@@ -26,29 +24,12 @@ func main() {
 		[]byte("trying"),
 	}
 
-	// Sort & truncate keys
-
-	sort := func(x, y louds.Key) bool {
-		return x.Less(y)
-	}
-	slices.SortFunc(keys, sort)
-
-	keys = louds.Truncate(keys)
-
-	fmt.Println("Sorted & truncated keys:")
-	for _, k := range keys {
-		fmt.Printf("\t%s\n", k)
-	}
-
-	builder := dense.NewBuilder(BITMAP_CAPACITY)
-	fmt.Printf("Node capacity: %d\n", builder.NodeCapacity())
-
-	err := builder.Build(keys)
+	surf, err := store.New(keys, store.SURFOptions{})
 	if err != nil {
-		log.Panicf("Error building tree: %v", err)
+		log.Fatalf("Error instantinating SuRF: %v", err)
 	}
 
-	fmt.Printf("Labels:\n%s\n", builder.Labels)
-	fmt.Printf("HasChild:\n%s\n", builder.HasChild)
-	fmt.Printf("IsPrefixKey:\n%s\n", builder.HasChild)
+	fmt.Printf("D-Labels:\n%s\n", surf.DenseLabels)
+	fmt.Printf("D-HasChild:\n%s\n", surf.DenseHasChild)
+	fmt.Printf("D-IsPrefixKey:\n%s\n", surf.DenseHasChild)
 }

@@ -54,6 +54,8 @@ func New(rawKeys [][]byte, options SURFOptions) (*SURF, error) {
 		keys[i] = louds.Key(rawKeys[i])
 	}
 
+	keys = louds.Truncate(keys)
+
 	// TODO once LOUDS-SPARSE support added, memory limit must be split
 	// appropriately (based on options.R) between DENSE and SPARSE builder.
 	denseBuilder := dense.NewBuilder(*options.MemoryLimit)
