@@ -1,6 +1,9 @@
 package store
 
-import "testing"
+import (
+	"math/rand"
+	"testing"
+)
 
 func TestNew(t *testing.T) {
 	keys := [][]byte{}
@@ -73,17 +76,17 @@ func TestLookup(t *testing.T) {
 // Performs a test with the test-data-set pulled from the paper.
 func TestLookupPaperTestset(t *testing.T) {
 	keys := [][]byte{
-		[]byte("f"),
 		[]byte("farther"),
-		[]byte("fas"),
-		[]byte("fasten"),
-		[]byte("fat"),
-		[]byte("splice"),
-		[]byte("topper"),
-		[]byte("toy"),
 		[]byte("tries"),
-		[]byte("tripper"),
+		[]byte("fat"),
 		[]byte("trying"),
+		[]byte("fasten"),
+		[]byte("topper"),
+		[]byte("f"),
+		[]byte("splice"),
+		[]byte("tripper"),
+		[]byte("toy"),
+		[]byte("fas"),
 	}
 
 	surf, err := New(keys, SURFOptions{})
@@ -161,6 +164,40 @@ func TestLookupFalsePositive(t *testing.T) {
 
 	if !exists {
 		t.Errorf("Expected false-positive when looking up key %x; but got none", falsePositiveKey)
+	}
+}
+
+func TestLookupRandom(t *testing.T) {
+	const NUM_KEYS = 100_000
+	const KEY_LENGTH_MIN = 1
+	const KEY_LENGTH_MAX = 50
+
+	rand.Seed(42)
+
+	keys := make([][]byte, NUM_KEYS)
+	for i := 0; i < NUM_KEYS; i++ {
+		keyLength := rand.Intn(KEY_LENGTH_MAX - KEY_LENGTH_MIN + 1) // [0, max - min + 1)
+		keyLength += KEY_LENGTH_MIN                                 // [min, max + 1)
+
+		keys[i] = make([]byte, keyLength)
+		rand.Read(keys[i])
+	}
+
+	surf, err := New(keys, SURFOptions{})
+	if err != nil {
+		t.Fatalf("Error creating SuRF store: %v", err)
+	}
+
+	// All added keys have to be found in there
+	for _, k := range keys {
+		exists, err := surf.Lookup(k)
+		if err != nil {
+			t.Fatalf("Error looking up key: %v", err)
+		}
+
+		if !exists {
+			t.Errorf("Expected key %x to exist; but did not", k)
+		}
 	}
 }
 

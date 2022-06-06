@@ -2,11 +2,11 @@ package store
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/Lavode/surf/bitmap"
 	"github.com/Lavode/surf/louds"
 	"github.com/Lavode/surf/louds/dense"
+	"golang.org/x/exp/slices"
 )
 
 type SURF struct {
@@ -55,6 +55,13 @@ func New(rawKeys [][]byte, options SURFOptions) (*SURF, error) {
 		keys[i] = louds.Key(rawKeys[i])
 	}
 
+	// Keys must be sorted for truncation to work
+	sort := func(x, y louds.Key) bool {
+		return x.Less(y)
+	}
+	slices.SortFunc(keys, sort)
+
+	// Truncate keys
 	keys = louds.Truncate(keys)
 
 	// TODO once LOUDS-SPARSE support added, memory limit must be split
@@ -88,8 +95,6 @@ func (surf *SURF) Lookup(key []byte) (bool, error) {
 		keyByte := key[i]
 		labelOffset := currentNode*256 + int(keyByte)
 
-		log.Printf("Currently checking node %d, looking for edge %x (offset = %d)", currentNode, keyByte, labelOffset)
-
 		hasLabel, err := surf.DenseLabels.Get(labelOffset)
 		if err != nil {
 			return false, fmt.Errorf("Error accessing bit %d in D-Labels: %v", labelOffset, err)
@@ -98,7 +103,6 @@ func (surf *SURF) Lookup(key []byte) (bool, error) {
 		if hasLabel == 0 {
 			// There's no outbound edge with the value we are
 			// looking for, so the key doesn't exist.
-			log.Printf("Edge not found, key does not exist")
 			return false, nil
 		}
 
@@ -113,11 +117,8 @@ func (surf *SURF) Lookup(key []byte) (bool, error) {
 		}
 
 		if hasChild == 0 {
-			log.Printf("Edge found with HasChild == 0, key exists")
 			return true, nil
 		} else {
-			log.Printf("Edge found with HasChild == 1, must dive deeper")
-
 			// Index of node this edge points to is given by:
 			// rank_1(D-HasChild, offset)
 			currentNode, err = surf.DenseHasChild.Rank(1, labelOffset)
@@ -136,10 +137,8 @@ func (surf *SURF) Lookup(key []byte) (bool, error) {
 	}
 
 	if isPrefixKey == 1 {
-		log.Printf("Reached end of key on node with IsPrefixKey = 1, key found")
 		return true, nil
 	} else {
-		log.Printf("Reached end of key on node with IsPrefixKey = 0, key not found")
 		return false, nil
 	}
 }
