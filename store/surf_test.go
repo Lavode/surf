@@ -250,7 +250,6 @@ func TestLookupOrGreater(t *testing.T) {
 }
 
 func TestRangeLookup(t *testing.T) {
-	t.Skip("WIP")
 	// We'll store all keys in the range [0x0000 .. 0xFF00]
 	keys := make([][]byte, 0, 65536)
 	for i := 0; i < 0xFF; i++ {
@@ -333,6 +332,7 @@ func TestRangeLookupPaperDataset(t *testing.T) {
 		{[]byte("a"), []byte("f"), true},
 		{[]byte("a"), []byte("fat"), true},
 		{[]byte("fal"), []byte("fat"), true},
+		{[]byte("r"), []byte("s"), true},
 		{[]byte("s"), []byte("s"), true},
 		{[]byte("tp"), []byte("tq"), false},
 		{[]byte("tp"), []byte("ts"), true},
@@ -345,7 +345,7 @@ func TestRangeLookupPaperDataset(t *testing.T) {
 		hasKey, err := surf.RangeLookup(test.lower, test.upper)
 		assert.Nil(t, err)
 
-		assert.Equal(t, test.hasKey, hasKey)
+		assert.Equal(t, test.hasKey, hasKey, "Expected range query from %s to %s to find keys, did not", test.lower, test.upper)
 	}
 }
 
@@ -355,6 +355,7 @@ func TestCount(t *testing.T) {
 		[]byte{0x00, 0x01, 0x02}, // Key in leaf node
 		[]byte{0x42},
 		[]byte{0xFF, 0x42, 0x70, 0x71},
+		[]byte{0xFF, 0x42, 0x70, 0x72}, // Ensure key above isn't truncated
 	}
 	surf, err := New(keys, SURFOptions{})
 	if err != nil {
@@ -382,6 +383,49 @@ func TestCount(t *testing.T) {
 	if cnt != 0 {
 		t.Errorf("Expected 0 keys in range %x to %x; got %d", low, high, cnt)
 	}
+}
 
-	// TODO fully understand case of overcounting at boundaries, and add test.
+func TestCountPaperDataset(t *testing.T) {
+	keys := [][]byte{
+		[]byte("farther"),
+		[]byte("tries"),
+		[]byte("fat"),
+		[]byte("trying"),
+		[]byte("fasten"),
+		[]byte("topper"),
+		[]byte("f"),
+		[]byte("splice"),
+		[]byte("tripper"),
+		[]byte("toy"),
+		[]byte("fas"),
+	}
+
+	surf, err := New(keys, SURFOptions{})
+	if err != nil {
+		t.Fatalf("Error creating SuRF store: %v", err)
+	}
+
+	tests := []struct {
+		lower []byte
+		upper []byte
+		count int
+	}{
+		{[]byte("a"), []byte("ezmatch"), 0},
+		{[]byte("a"), []byte("f"), 1},
+		{[]byte("a"), []byte("fat"), 5},
+		{[]byte("fal"), []byte("fat"), 4},
+		{[]byte("s"), []byte("s"), 1},
+		{[]byte("tp"), []byte("tq"), 0},
+		{[]byte("tp"), []byte("ts"), 3},
+		{[]byte("tripper"), []byte("try"), 2},
+		{[]byte("tripper"), []byte("zarty"), 2},
+		{[]byte("trz"), []byte("zarty"), 0},
+	}
+
+	for _, test := range tests {
+		count, err := surf.Count(test.lower, test.upper)
+		assert.Nil(t, err)
+
+		assert.Equal(t, test.count, count, "Expected count from %s to %s = %d, got %d", test.lower, test.upper, test.count, count)
+	}
 }

@@ -1,5 +1,14 @@
 package store
 
+// TODO there's unproper conflation of 'current edge the iterator points to'
+// and 'next edge the iterator will attempt to traverse when calling next()'.
+// This causes issues where e.g. upon an exact match, nextEdge is the edge
+// where the match was found. If one then calls Next() on the iterator, the
+// same value will be returned a second time.
+//
+// This is worked around in the code below, but ought to be cleaned up.
+// Potentially by separating the two fields.
+
 import (
 	"errors"
 	"fmt"

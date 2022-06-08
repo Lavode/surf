@@ -101,6 +101,14 @@ func (surf *SURF) Lookup(key []byte) (bool, error) {
 // This can be used to e.g. implement find-next-greater-than.
 //
 // As this leaks internal structure this method is not part of the public API.
+//
+// If there was a match, then the iterator's nextEdge will be the edge *where
+// the match was found*. THis implies that calling Next() on it will produce
+// the same element a second time.
+// If there was no match, nextEdge will be the first edge where it was clear
+// that no match will be found.
+// This is rather messy and in need of refactoring, see the comment at the top
+// of iterator.go.
 func (surf *SURF) lookup(key []byte) (bool, []byte, Iterator, error) {
 	it := Iterator{
 		Labels:      surf.DenseLabels,
@@ -157,6 +165,13 @@ func (surf *SURF) lookupOrGreater(key []byte) ([]byte, Iterator, error) {
 	}
 
 	if exists {
+		// The iterator currently points to the exact match. We'll
+		// advance its nextEdge field by one, to ensure that a call to
+		// Next() won't produce the element a second time.
+		// This is in need of cleaning up, see the comment in
+		// iterator.go.
+		it.nextEdge++
+
 		// We won't return `key` but rather the (potentially truncated)
 		// key stored in the FST.
 		return matchedKey, it, nil
@@ -186,9 +201,7 @@ func (surf *SURF) RangeLookup(low, high []byte) (bool, error) {
 		return false, err
 	}
 
-	if bytes.Equal(matchedKey, high) {
-		return true, nil
-	} else if louds.Key(matchedKey).Less(louds.Key(high)) {
+	if louds.Key(matchedKey).Less(louds.Key(high)) || bytes.Equal(matchedKey, high) {
 		return true, nil
 	} else {
 		return false, nil
@@ -201,5 +214,28 @@ func (surf *SURF) RangeLookup(low, high []byte) (bool, error) {
 // The count is exact, except for the two boundary cases. As such there is the
 // possibility to overcount by up to two.
 func (surf *SURF) Count(low, high []byte) (int, error) {
-	return 0, nil
+	matchedKey, it, err := surf.lookupOrGreater(low)
+	if errors.Is(err, ErrEndOfTrie) {
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	highKey := louds.Key(high)
+	curKey := louds.Key(matchedKey)
+	for curKey.Less(highKey) || bytes.Equal(curKey, highKey) {
+		count++
+
+		nextKey, err := it.Next()
+		if errors.Is(err, ErrEndOfTrie) {
+			break
+		} else if err != nil {
+			return 0, nil
+		}
+
+		curKey = louds.Key(nextKey)
+	}
+
+	return count, nil
 }
