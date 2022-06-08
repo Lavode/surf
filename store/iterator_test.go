@@ -133,5 +133,66 @@ func TestNext(t *testing.T) {
 }
 
 func TestNextAndGotoChild(t *testing.T) {
+	labels, hasChild, isPrefixKey := buildFST(t)
+	it := Iterator{
+		Labels:      labels,
+		HasChild:    hasChild,
+		IsPrefixKey: isPrefixKey,
+	}
 
+	// This test aims to ensure that various combinations of "go to child"
+	// and "next" work as they should. This is worth testing as both
+	// maintain and modify the iterator's internal state.
+
+	err := it.GoToChild('f')
+	// Now at 'f'
+	assert.Nil(t, err)
+
+	key, err := it.Next()
+	// Now at 'fa' with key 'far'
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key{'f', 'a', 'r'}, key)
+
+	err = it.GoToChild('s')
+	// Now at 'fas'
+	assert.Nil(t, err)
+
+	key, err = it.Next()
+	// Now at 'fas' with key 'fast'
+	assert.Equal(t, louds.Key{'f', 'a', 's', 't'}, key)
+
+	key, err = it.Next()
+	// Now at 'fa' with key 'fat'
+	assert.Equal(t, louds.Key{'f', 'a', 't'}, key)
+
+	key, err = it.Next()
+	// Now at '' with key 't'
+	assert.Equal(t, louds.Key{'s'}, key)
+
+	err = it.GoToChild('t')
+	// Now at 't'
+	assert.Nil(t, err)
+
+	err = it.GoToChild('o')
+	// Now at 'to'
+	assert.Nil(t, err)
+
+	key, err = it.Next()
+	// Now at 'to' with key 'top'
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key{'t', 'o', 'p'}, key)
+
+	key, err = it.Next()
+	// Now at 'to' with key 'toy'
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key{'t', 'o', 'y'}, key)
+
+	key, err = it.Next()
+	// Now at 'tri' with key 'trie'
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key{'t', 'r', 'i', 'e'}, key)
+
+	// Which has a leaf node 'trip'
+	err = it.GoToChild('p')
+	assert.ErrorIs(t, err, ErrIsLeaf)
 }
