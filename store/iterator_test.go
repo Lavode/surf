@@ -131,3 +131,7 @@ func TestNext(t *testing.T) {
 	_, err = it.Next()
 	assert.ErrorIs(t, err, ErrEndOfTrie)
 }
+
+func TestNextAndGotoChild(t *testing.T) {
+
+}

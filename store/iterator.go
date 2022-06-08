@@ -39,20 +39,6 @@ type Iterator struct {
 	keyPrefix stack.Stack[byte]
 }
 
-func NewIterator(labels, hasChild, isPrefixKey *bitmap.Bitmap) Iterator {
-	it := Iterator{
-		Labels:      labels,
-		HasChild:    hasChild,
-		IsPrefixKey: isPrefixKey,
-	}
-
-	it.keyPrefix = stack.Stack[byte]{}
-	it.nodes = stack.Stack[int]{}
-	it.edges = stack.Stack[int]{}
-
-	return it
-}
-
 // ErrNoSuchEdge indicates that the requested edge does not exist.
 var ErrNoSuchEdge = errors.New("Cannot move to non-existant edge")
 
