@@ -165,6 +165,4 @@ func (it *Iterator) Next() (louds.Key, error) {
 			it.keyPrefix.Pop()
 		}
 	}
-
-	return louds.Key{}, nil
 }
