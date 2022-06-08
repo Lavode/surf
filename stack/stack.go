@@ -1,5 +1,7 @@
 package stack
 
+import "golang.org/x/exp/slices"
+
 // Stack implements a very basic stack.
 //
 // Very little is provided in terms of safety or convenience. It is
@@ -23,4 +25,10 @@ func (stack *Stack[T]) Pop() T {
 	stack.data = stack.data[:idx]
 
 	return x
+}
+
+// Data returns a (shallow) copy of the data contained in the stack, with the
+// most recently added item in the last position.
+func (stack *Stack[T]) Data() []T {
+	return slices.Clone(stack.data)
 }

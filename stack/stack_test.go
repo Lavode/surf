@@ -20,3 +20,14 @@ func TestPushPop(t *testing.T) {
 	assert.Equal(t, byte(20), stack.Pop())
 	assert.Equal(t, byte(3), stack.Pop())
 }
+
+func TestData(t *testing.T) {
+	stack := Stack[string]{}
+
+	stack.Push("Hello")
+	stack.Push("World")
+	stack.Push("From the stack")
+
+	expected := []string{"Hello", "World", "From the stack"}
+	assert.Equal(t, expected, stack.Data())
+}
