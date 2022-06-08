@@ -92,11 +92,7 @@ func (surf *SURF) Lookup(key []byte) (bool, error) {
 	// currentNode * 256 is the offset in D-Labels and D-HasChild.
 	currentNode := 0
 
-	it := Iterator{
-		Labels:      surf.DenseLabels,
-		HasChild:    surf.DenseHasChild,
-		IsPrefixKey: surf.DenseIsPrefixKey,
-	}
+	it := NewIterator(surf.DenseLabels, surf.DenseHasChild, surf.DenseIsPrefixKey)
 
 	for i := 0; i < len(key); i++ {
 		keyByte := key[i]

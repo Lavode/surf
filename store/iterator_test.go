@@ -49,35 +49,85 @@ func TestGoToChild(t *testing.T) {
 
 	// root -> f child
 	it.NodeIndex = 0
-	it.EdgeIndex = 0
 	assert.Nil(t, it.GoToChild('f'))
 	assert.Equal(t, 1, it.NodeIndex)
-	assert.Equal(t, byte(0), it.EdgeIndex)
 
 	// root -> h non-existant
 	it.NodeIndex = 0
-	it.EdgeIndex = 0
 	assert.ErrorIs(t, it.GoToChild('h'), ErrNoSuchEdge)
 
 	// root -> s leaf
 	it.NodeIndex = 0
-	it.EdgeIndex = 0
 	assert.ErrorIs(t, it.GoToChild('s'), ErrIsLeaf)
 
 	// root -> t node
 	it.NodeIndex = 0
-	it.EdgeIndex = 0
 	assert.Nil(t, it.GoToChild('t'))
 	assert.Equal(t, 2, it.NodeIndex)
-	assert.Equal(t, byte(0), it.EdgeIndex)
 
 	// t -> r node
 	assert.Nil(t, it.GoToChild('r'))
 	assert.Equal(t, 5, it.NodeIndex)
-	assert.Equal(t, byte(0), it.EdgeIndex)
 
 	// r -> i
 	assert.Nil(t, it.GoToChild('i'))
 	assert.Equal(t, 7, it.NodeIndex)
-	assert.Equal(t, byte(0), it.EdgeIndex)
+}
+
+func TestNext(t *testing.T) {
+	labels, hasChild, isPrefixKey := buildFST(t)
+	it := Iterator{
+		Labels:      labels,
+		HasChild:    hasChild,
+		IsPrefixKey: isPrefixKey,
+	}
+
+	// We'll iterate through keys until we hit the end of the tree,
+	// expecting them to be yielded in lexicographic order.
+	key, err := it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("f"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("far"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("fas"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("fast"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("fat"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("s"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("top"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("toy"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("trie"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("trip"), key)
+
+	key, err = it.Next()
+	assert.Nil(t, err)
+	assert.Equal(t, louds.Key("try"), key)
+
+	_, err = it.Next()
+	assert.ErrorIs(t, err, ErrEndOfTrie)
 }
