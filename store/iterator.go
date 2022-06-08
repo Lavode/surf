@@ -53,10 +53,26 @@ func NewIterator(labels, hasChild, isPrefixKey *bitmap.Bitmap) Iterator {
 	return it
 }
 
+// ErrNoSuchEdge indicates that the requested edge does not exist.
 var ErrNoSuchEdge = errors.New("Cannot move to non-existant edge")
+
+// ErrIsLeaf indicates that the requested edge points to a leaf node, which
+// cannot be travelled to.
 var ErrIsLeaf = errors.New("Cannot move to leaf node")
+
+// ErrEndOfTrie indicates that trie traversal reached the end of the trie.
 var ErrEndOfTrie = errors.New("Reached end of trie")
 
+// GoToChild attempts to move down the edge with the specified value.
+//
+// It will keep track of the current node it is at, as well as of the key
+// defined by the edge along the path.
+//
+// If the edge does not exist, ErrNoSuchEdge is returned.
+// If the edge points to a leaf node (which cannot be travelled to), ErrIsLeaf
+// is returned.
+// If an error occurs in the underlying data structure, a generic error is
+// returned.
 func (it *Iterator) GoToChild(edge byte) error {
 	offset := 256*it.NodeIndex + int(edge)
 
@@ -96,6 +112,9 @@ func (it *Iterator) GoToChild(edge byte) error {
 	return nil
 }
 
+// Next moves to and returns the next key in lexicographic order.
+//
+// Once the end of the trie is reached, ErrEndOfTrie is returned.
 func (it *Iterator) Next() (louds.Key, error) {
 	for {
 		// We first attempt to go depth-first down the first available edge.
