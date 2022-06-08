@@ -1,6 +1,7 @@
 package store
 
 import (
+	"log"
 	"math/rand"
 	"testing"
 
@@ -238,28 +239,36 @@ func TestLookupOrGreater(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		key, err := surf.LookupOrGreater(test.query)
+		key, _, err := surf.lookupOrGreater(test.query)
 		assert.Nil(t, err)
 		assert.Equal(t, test.result, key)
 	}
 
 	// No next-larger key should be found
-	_, err = surf.LookupOrGreater([]byte("trz"))
+	_, _, err = surf.lookupOrGreater([]byte("trz"))
 	assert.NotNil(t, err)
 	assert.ErrorIs(t, err, ErrEndOfTrie)
 }
 
 func TestRangeLookup(t *testing.T) {
-	t.Skip("WIP")
 	// We'll store all keys in the range [0x0000 .. 0xFF00]
 	keys := make([][]byte, 0, 65536)
-	for i := 0; i < 255; i++ {
-		for j := 0; j < 256; j++ {
+	for i := 0; i < 0xFF; i++ {
+		for j := 0; j <= 0xFF; j++ {
 			key := []byte{byte(i), byte(j)}
 			keys = append(keys, key)
 		}
 	}
-	keys = append(keys, []byte{0xFF, 0x00}) // Not included in loop above
+	// We add 0xFF00 and 0xFF01 as, if we only added 0xFF, truncation would
+	// cut it off after 0xFF.
+	// Then, any 0xFF... query would get a (false) positive match.
+	keys = append(keys, []byte{0xFF, 0x00})
+	keys = append(keys, []byte{0xFF, 0x01})
+
+	for _, k := range keys[len(keys)-1000:] {
+		log.Printf("- %x", k)
+	}
+	log.Printf("# of keys: %d", len(keys))
 
 	surf, err := New(keys, SURFOptions{})
 	if err != nil {
@@ -289,7 +298,7 @@ func TestRangeLookup(t *testing.T) {
 	}
 
 	// Lookup range does not overlap key range
-	low = []byte{0xF2}
+	low = []byte{0xFF, 0x02}
 	high = []byte{0xFF, 0x20}
 	exists, err = surf.RangeLookup(low, high)
 	if err != nil {
@@ -297,6 +306,51 @@ func TestRangeLookup(t *testing.T) {
 	}
 	if exists {
 		t.Errorf("Expected range lookup %x -> %x to return false; got true", low, high)
+	}
+}
+
+func TestRangeLookupPaperDataset(t *testing.T) {
+	keys := [][]byte{
+		[]byte("farther"),
+		[]byte("tries"),
+		[]byte("fat"),
+		[]byte("trying"),
+		[]byte("fasten"),
+		[]byte("topper"),
+		[]byte("f"),
+		[]byte("splice"),
+		[]byte("tripper"),
+		[]byte("toy"),
+		[]byte("fas"),
+	}
+
+	surf, err := New(keys, SURFOptions{})
+	if err != nil {
+		t.Fatalf("Error creating SuRF store: %v", err)
+	}
+
+	tests := []struct {
+		lower  []byte
+		upper  []byte
+		hasKey bool
+	}{
+		{[]byte("a"), []byte("ezmatch"), false},
+		{[]byte("a"), []byte("f"), true},
+		{[]byte("a"), []byte("fat"), true},
+		{[]byte("fal"), []byte("fat"), true},
+		{[]byte("s"), []byte("s"), true},
+		{[]byte("tp"), []byte("tq"), false},
+		{[]byte("tp"), []byte("ts"), true},
+		{[]byte("tripper"), []byte("try"), true},
+		{[]byte("tripper"), []byte("zarty"), true},
+		{[]byte("trz"), []byte("zarty"), false},
+	}
+
+	for _, test := range tests {
+		hasKey, err := surf.RangeLookup(test.lower, test.upper)
+		assert.Nil(t, err)
+
+		assert.Equal(t, test.hasKey, hasKey)
 	}
 }
 

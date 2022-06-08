@@ -1,8 +1,10 @@
 package store
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/Lavode/surf/bitmap"
 	"github.com/Lavode/surf/louds"
@@ -140,33 +142,36 @@ func (surf *SURF) lookup(key []byte) (bool, []byte, Iterator, error) {
 	}
 }
 
-// LookupOrGreater checks existence of a key in the SuRF store.
+// lookupOrGreater checks existence of a key in the SuRF store.
 //
 // If it is found it is returned. If not, then the next greater key is
 // returned.
 //
+// It also returns the matching key, as well as the state of the iterator at
+// that point.
+//
 // If no greater key is found, ErrEndOfTrie is returned.
-func (surf *SURF) LookupOrGreater(key []byte) ([]byte, error) {
+func (surf *SURF) lookupOrGreater(key []byte) ([]byte, Iterator, error) {
 	exists, matchedKey, it, err := surf.lookup(key)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, it, err
 	}
 
 	if exists {
 		// We won't return `key` but rather the (potentially truncated)
 		// key stored in the FST.
-		return matchedKey, nil
+		return matchedKey, it, nil
 	} else {
 		// We can easily find the next larger key by telling the
 		// iterator to find the next key from where it is at currently.
 		largerKey, err := it.Next()
 		if errors.Is(err, ErrEndOfTrie) {
-			return []byte{}, err
+			return []byte{}, it, err
 		} else if err != nil {
-			return []byte{}, err
+			return []byte{}, it, err
 		}
 
-		return largerKey, nil
+		return largerKey, it, nil
 	}
 }
 
@@ -175,7 +180,26 @@ func (surf *SURF) LookupOrGreater(key []byte) ([]byte, error) {
 //
 // As with Lookup, there is the possibility of false positives.
 func (surf *SURF) RangeLookup(low, high []byte) (bool, error) {
-	return true, nil
+	log.Printf("Range lookup: %x -> %x", low, high)
+	matchedKey, _, err := surf.lookupOrGreater(low)
+	if errors.Is(err, ErrEndOfTrie) {
+		log.Printf("> Looking up >= lower ran out o trie")
+		return false, nil
+	} else if err != nil {
+		log.Printf("> Looking up >= lower produced error")
+		return false, err
+	}
+
+	if bytes.Equal(matchedKey, high) {
+		log.Printf("> Looking up >= lower found exact match of lower")
+		return true, nil
+	} else if louds.Key(matchedKey).Less(louds.Key(high)) {
+		log.Printf("> Looking up >= lower found next-greater match < upper: %x", matchedKey)
+		return true, nil
+	} else {
+		log.Printf("> Looking up >= lower found next-greater match > upper: %x", matchedKey)
+		return false, nil
+	}
 }
 
 // Count returns an approximate count of the number of keys in [low, high],
