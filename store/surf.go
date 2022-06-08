@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/Lavode/surf/bitmap"
 	"github.com/Lavode/surf/louds"
@@ -180,24 +179,18 @@ func (surf *SURF) lookupOrGreater(key []byte) ([]byte, Iterator, error) {
 //
 // As with Lookup, there is the possibility of false positives.
 func (surf *SURF) RangeLookup(low, high []byte) (bool, error) {
-	log.Printf("Range lookup: %x -> %x", low, high)
 	matchedKey, _, err := surf.lookupOrGreater(low)
 	if errors.Is(err, ErrEndOfTrie) {
-		log.Printf("> Looking up >= lower ran out o trie")
 		return false, nil
 	} else if err != nil {
-		log.Printf("> Looking up >= lower produced error")
 		return false, err
 	}
 
 	if bytes.Equal(matchedKey, high) {
-		log.Printf("> Looking up >= lower found exact match of lower")
 		return true, nil
 	} else if louds.Key(matchedKey).Less(louds.Key(high)) {
-		log.Printf("> Looking up >= lower found next-greater match < upper: %x", matchedKey)
 		return true, nil
 	} else {
-		log.Printf("> Looking up >= lower found next-greater match > upper: %x", matchedKey)
 		return false, nil
 	}
 }

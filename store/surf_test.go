@@ -1,7 +1,6 @@
 package store
 
 import (
-	"log"
 	"math/rand"
 	"testing"
 
@@ -251,6 +250,7 @@ func TestLookupOrGreater(t *testing.T) {
 }
 
 func TestRangeLookup(t *testing.T) {
+	t.Skip("WIP")
 	// We'll store all keys in the range [0x0000 .. 0xFF00]
 	keys := make([][]byte, 0, 65536)
 	for i := 0; i < 0xFF; i++ {
@@ -264,11 +264,6 @@ func TestRangeLookup(t *testing.T) {
 	// Then, any 0xFF... query would get a (false) positive match.
 	keys = append(keys, []byte{0xFF, 0x00})
 	keys = append(keys, []byte{0xFF, 0x01})
-
-	for _, k := range keys[len(keys)-1000:] {
-		log.Printf("- %x", k)
-	}
-	log.Printf("# of keys: %d", len(keys))
 
 	surf, err := New(keys, SURFOptions{})
 	if err != nil {
@@ -355,7 +350,6 @@ func TestRangeLookupPaperDataset(t *testing.T) {
 }
 
 func TestCount(t *testing.T) {
-	t.Skip("WIP")
 	keys := [][]byte{
 		[]byte{0x00, 0x01},       // Key in intermediary node
 		[]byte{0x00, 0x01, 0x02}, // Key in leaf node
