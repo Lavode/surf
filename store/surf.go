@@ -87,11 +87,20 @@ func New(rawKeys [][]byte, options SURFOptions) (*SURF, error) {
 // keys, as well as the number of additional bits used to store full keys
 // (RealBits) and the hash value of keys (KeyBits).
 func (surf *SURF) Lookup(key []byte) (bool, error) {
-	// The level-order index of the node we are currently in.
-	// As such, currentNode is also the offset in D-IsPrefixKey, and
-	// currentNode * 256 is the offset in D-Labels and D-HasChild.
-	currentNode := 0
+	exists, _, _, err := surf.lookup(key)
 
+	return exists, err
+}
+
+// lookup checks existence of a key in the SuRF store (see documentation of
+// Lookup).
+//
+// In addition it will yield the actual key which was found as well as the
+// iterator in whatever state it was then lookup terminated.
+// This can be used to e.g. implement find-next-greater-than.
+//
+// As this leaks internal structure this method is not part of the public API.
+func (surf *SURF) lookup(key []byte) (bool, []byte, Iterator, error) {
 	it := Iterator{
 		Labels:      surf.DenseLabels,
 		HasChild:    surf.DenseHasChild,
@@ -105,13 +114,13 @@ func (surf *SURF) Lookup(key []byte) (bool, error) {
 		if err != nil {
 			if errors.Is(err, ErrNoSuchEdge) {
 				// No edge with this value, so the key doesn't exist.
-				return false, nil
+				return false, []byte{}, it, nil
 			} else if errors.Is(err, ErrIsLeaf) {
 				// We attempted to enter a leaf node, so the key exists
-				return true, nil
+				return true, key[:i+1], it, nil
 			} else {
 				// Non-specific error, e.g. issue with bitmap access
-				return false, err
+				return false, []byte{}, it, err
 			}
 		}
 	}
@@ -121,13 +130,43 @@ func (surf *SURF) Lookup(key []byte) (bool, error) {
 	// IsPrefixKey set to true.
 	isPrefixKey, err := surf.DenseIsPrefixKey.Get(it.NodeIndex)
 	if err != nil {
-		return false, fmt.Errorf("Error accessing bit %d in D-IsPrefixKey: %v", currentNode, err)
+		return false, []byte{}, it, fmt.Errorf("Error accessing bit %d in D-IsPrefixKey: %v", it.NodeIndex, err)
 	}
 
 	if isPrefixKey == 1 {
-		return true, nil
+		return true, key, it, nil
 	} else {
-		return false, nil
+		return false, []byte{}, it, nil
+	}
+}
+
+// LookupOrGreater checks existence of a key in the SuRF store.
+//
+// If it is found it is returned. If not, then the next greater key is
+// returned.
+//
+// If no greater key is found, ErrEndOfTrie is returned.
+func (surf *SURF) LookupOrGreater(key []byte) ([]byte, error) {
+	exists, matchedKey, it, err := surf.lookup(key)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if exists {
+		// We won't return `key` but rather the (potentially truncated)
+		// key stored in the FST.
+		return matchedKey, nil
+	} else {
+		// We can easily find the next larger key by telling the
+		// iterator to find the next key from where it is at currently.
+		largerKey, err := it.Next()
+		if errors.Is(err, ErrEndOfTrie) {
+			return []byte{}, err
+		} else if err != nil {
+			return []byte{}, err
+		}
+
+		return largerKey, nil
 	}
 }
 

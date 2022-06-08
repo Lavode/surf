@@ -29,6 +29,8 @@ type Iterator struct {
 
 	// nextEdge is the value of the next edge we will (try to) visit in
 	// this node, if it exists.
+	// Having it as an int allows to nicely set it to 256 to indicate that
+	// we will not observe any more edges in a given node.
 	nextEdge int
 	// edges is the stack of edges we passed through to get to the current
 	// node.
@@ -60,6 +62,8 @@ var ErrEndOfTrie = errors.New("Reached end of trie")
 // If an error occurs in the underlying data structure, a generic error is
 // returned.
 func (it *Iterator) GoToChild(edge byte) error {
+	it.nextEdge = int(edge)
+
 	offset := 256*it.NodeIndex + int(edge)
 
 	hasLabel, err := it.Labels.Get(offset)
@@ -87,8 +91,8 @@ func (it *Iterator) GoToChild(edge byte) error {
 		return fmt.Errorf("Error calculating rank_1(%d) over HasChild: %v", offset, err)
 	}
 
-	// Update path we took to get here
-	it.keyPrefix.Push(edge)
+	// Update path we took to get to new node
+	it.keyPrefix.Push(byte(it.nextEdge))
 	it.nodes.Push(it.NodeIndex)
 	it.edges.Push(int(edge))
 

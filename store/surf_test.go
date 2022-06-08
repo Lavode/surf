@@ -3,6 +3,8 @@ package store
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNew(t *testing.T) {
@@ -199,6 +201,52 @@ func TestLookupRandom(t *testing.T) {
 			t.Errorf("Expected key %x to exist; but did not", k)
 		}
 	}
+}
+
+func TestLookupOrGreater(t *testing.T) {
+	keys := [][]byte{
+		[]byte("farther"),
+		[]byte("tries"),
+		[]byte("fat"),
+		[]byte("trying"),
+		[]byte("fasten"),
+		[]byte("topper"),
+		[]byte("f"),
+		[]byte("splice"),
+		[]byte("tripper"),
+		[]byte("toy"),
+		[]byte("fas"),
+	}
+
+	surf, err := New(keys, SURFOptions{})
+	if err != nil {
+		t.Fatalf("Error creating SuRF store: %v", err)
+	}
+
+	tests := []struct {
+		query  []byte
+		result []byte
+	}{
+		{[]byte("a"), []byte("f")},
+		{[]byte("fas"), []byte("fas")},
+		{[]byte("fal"), []byte("far")},
+		{[]byte("fasa"), []byte("fast")},
+		{[]byte("t"), []byte("top")},
+		{[]byte("trif"), []byte("trip")},
+		// That's a potential FP match, as the untruncated key might have been e.g. tripoli
+		{[]byte("tripper"), []byte("trip")},
+	}
+
+	for _, test := range tests {
+		key, err := surf.LookupOrGreater(test.query)
+		assert.Nil(t, err)
+		assert.Equal(t, test.result, key)
+	}
+
+	// No next-larger key should be found
+	_, err = surf.LookupOrGreater([]byte("trz"))
+	assert.NotNil(t, err)
+	assert.ErrorIs(t, err, ErrEndOfTrie)
 }
 
 func TestRangeLookup(t *testing.T) {
